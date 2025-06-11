@@ -82,4 +82,8 @@ crashlytics-build.properties
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers.meta
 
 /UnitySaveTool/**
+
+!/UnitySaveTool/Assets/
+!/UnitySaveTool/Assets/Plugins/
+!/UnitySaveTool/Assets/Plugins/UnitySaveTool/
 !/UnitySaveTool/Assets/Plugins/UnitySaveTool/**
