@@ -8,6 +8,14 @@
 /[Uu]ser[Ss]ettings/
 *.log
 
+/UnitySaveTool/**
+
+!/UnitySaveTool/Assets/
+!/UnitySaveTool/Assets/Plugins/
+!/UnitySaveTool/Assets/Plugins/UnitySaveTool/
+!/UnitySaveTool/Assets/Plugins/UnitySaveTool/**
+
+**/TestFolder/*
 
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
 *.blend1
@@ -49,6 +57,8 @@ ExportedObj/
 *.mdb
 *.opendb
 *.VC.db
+*cs.meta
+*.meta
 
 # Unity3D generated meta files
 *.pidb.meta
@@ -81,9 +91,4 @@ crashlytics-build.properties
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers.meta
 
-/UnitySaveTool/**
 
-!/UnitySaveTool/Assets/
-!/UnitySaveTool/Assets/Plugins/
-!/UnitySaveTool/Assets/Plugins/UnitySaveTool/
-!/UnitySaveTool/Assets/Plugins/UnitySaveTool/**
