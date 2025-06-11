@@ -2,25 +2,25 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace UnitySaveTool
 {
-    public class DefaultFileSystem : IFileSystem
+    public class FileSystem : IFileSystem
     {
         private IDataConverter _dataConverter;
 
         private Dictionary<string, Dictionary<Type, object>> _cachedDirectoryes;
 
-        public DefaultFileSystem(IDataConverter dataConverter)
+        public FileSystem(IDataConverter dataConverter)
         {
             _dataConverter = dataConverter;
 
             _cachedDirectoryes = new();
         }
 
-        public async Task Save(object objectToSave, params string[] folders)
+        public async UniTask Save(object objectToSave, params string[] folders)
         {
             string path = GetFullPath(true, folders);
 
@@ -39,7 +39,7 @@ namespace UnitySaveTool
             _cachedDirectoryes[path][objectType] = objectToSave;
         }
 
-        public async Task SaveAll(Dictionary<Type, object> objectsToSave, params string[] folders)
+        public async UniTask SaveAll(Dictionary<Type, object> objectsToSave, params string[] folders)
         {
             string path = GetFullPath(true, folders);
 
@@ -54,7 +54,7 @@ namespace UnitySaveTool
             _cachedDirectoryes[path] = objectsToSave;
         }
 
-        public async Task<object> Load(Type objectType, params string[] folders)
+        public async UniTask<object> Load(Type objectType, params string[] folders)
         {
             string path = GetFullPath(false, folders);
 
@@ -69,7 +69,7 @@ namespace UnitySaveTool
             return await filesCollection.Get(objectType);
         }
 
-        public async Task<Dictionary<Type, object>> LoadAll(params string[] folders)
+        public async UniTask<Dictionary<Type, object>> LoadAll(params string[] folders)
         {
             string path = GetFullPath(false, folders);
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnitySaveTool.Tools;
 
@@ -17,7 +17,7 @@ namespace UnitySaveTool
         private HashSet<Type> _types;
         private IDataConverter _dataConverter;
 
-        public async static Task<IFolderFilesCollection> GetFilesCollection(string folderPath, IDataConverter dataConverter)
+        public async static UniTask<IFolderFilesCollection> GetFilesCollection(string folderPath, IDataConverter dataConverter)
         {
             FolderMetadata folderMetadata;
 
@@ -65,7 +65,7 @@ namespace UnitySaveTool
             _serializableTypes = _types.Select(t => new SerializableType(t)).ToArray();
         }
 
-        public async Task Set(object obj)
+        public async UniTask Set(object obj)
         {
             Type type = obj.GetType();
 
@@ -84,14 +84,14 @@ namespace UnitySaveTool
             await Save();
         }
 
-        public async Task Reset(object obj)
+        public async UniTask Reset(object obj)
         {
             await Remove(obj.GetType());
 
             await Set(obj);
         }
 
-        public async Task Remove(Type type)
+        public async UniTask Remove(Type type)
         {
             string path = GetFullPath(type);
 
@@ -104,7 +104,7 @@ namespace UnitySaveTool
             await Save();
         }
 
-        public async Task ClearAll()
+        public async UniTask ClearAll()
         {
             foreach (Type type in _types)
                 await Remove(type);
@@ -115,7 +115,7 @@ namespace UnitySaveTool
             return _types.Contains(type);
         }
 
-        public async Task<object> Get(Type type)
+        public async UniTask<object> Get(Type type)
         {
             if (_types.Contains(type) == false)
                 return null;
@@ -127,7 +127,7 @@ namespace UnitySaveTool
             return _dataConverter.ConvertToObject(objectString, type);
         }
 
-        public async Task<Dictionary<Type, object>> GetAll()
+        public async UniTask<Dictionary<Type, object>> GetAll()
         {
             Dictionary<Type, object> deserializedObjects = new();
 
@@ -137,7 +137,7 @@ namespace UnitySaveTool
             return deserializedObjects;
         }
 
-        private async Task Save()
+        private async UniTask Save()
         {
             string path = GetFullPath(typeof(FolderMetadata));
 

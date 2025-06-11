@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace UnitySaveTool
 {
     public interface IFileSystem
     {
-        Task Save(object objectToSave, params string[] folders);
-        Task SaveAll(Dictionary<Type, object> objectsToSave, params string[] folders);
+       UniTask Save(object objectToSave, params string[] folders);
+       UniTask SaveAll(Dictionary<Type, object> objectsToSave, params string[] folders);
 
-        Task<object> Load(Type objectType, params string[] folders);
-        Task<Dictionary<Type, object>> LoadAll(params string[] folders);
+       UniTask<object> Load(Type objectType, params string[] folders);
+       UniTask<Dictionary<Type, object>> LoadAll(params string[] folders);
     }
 }

@@ -1,11 +1,11 @@
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace UnitySaveTool
 {
-    public class DefaultDataExplorer : IDataExplorer, 
+    public class DataExplorer : IDataExplorer,
         IGlobalDataExplorerContext, ISaveCellExplorerContext, ISceneDataExplorerContext
     {
         private readonly IFileSystem _fileSystem;
@@ -49,7 +49,7 @@ namespace UnitySaveTool
 
         #endregion
 
-        public DefaultDataExplorer(IFileSystem fileSystem)
+        public DataExplorer(IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
 
@@ -58,7 +58,7 @@ namespace UnitySaveTool
 
         #region IGlobalDataExplorerContext API
 
-        async Task<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCell()
+        async UniTask<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCell()
         {
             _globalContext = await _fileSystem.LoadAll();
 
@@ -68,7 +68,7 @@ namespace UnitySaveTool
                 return await OpenSaveCellInternal((_globalContext[typeof(SavedContext)] as SavedContext).SaveCell);
         }
 
-        async Task<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCell(int cellIndex)
+        async UniTask<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCell(int cellIndex)
         {
             return await OpenSaveCellInternal(cellIndex);
         }
@@ -78,12 +78,17 @@ namespace UnitySaveTool
             return GetDataInternal(type, _globalContext);
         }
 
-        async Task IGlobalDataExplorerContext.Save<T>(T data) where T : class
+        T IGlobalDataExplorerContext.GetData<T>()
+        {
+            return GetDataInternal(typeof(T), _globalContext) as T;
+        }
+
+        async UniTask IGlobalDataExplorerContext.Save<T>(T data) where T : class
         {
             await SaveDataInternal(data, _globalContext);
         }
 
-        private async Task<ISaveCellExplorerContext> OpenSaveCellInternal(int cellIndex)
+        private async UniTask<ISaveCellExplorerContext> OpenSaveCellInternal(int cellIndex)
         {
             if (cellIndex < 0)
                 throw new ArgumentOutOfRangeException("Save Cell Index can not be less than 0");
@@ -103,7 +108,7 @@ namespace UnitySaveTool
 
         #region ISaveCellExplorerContext API    
 
-        async Task<ISceneDataExplorerContext> ISaveCellExplorerContext.OpenScene(string sceneName)
+        async UniTask<ISceneDataExplorerContext> ISaveCellExplorerContext.OpenScene(string sceneName)
         {
             _sceneName = sceneName;
 
@@ -117,7 +122,12 @@ namespace UnitySaveTool
             return GetDataInternal(type, _cellContext);
         }
 
-        async Task ISaveCellExplorerContext.Save<T>(T data) where T : class
+        T ISaveCellExplorerContext.GetData<T>()
+        {
+            return GetDataInternal(typeof(T), _cellContext) as T;
+        }
+
+        async UniTask ISaveCellExplorerContext.Save<T>(T data) where T : class
         {
             await SaveDataInternal(data, _cellContext, _saveCellIndex.ToString());
         }
@@ -131,7 +141,12 @@ namespace UnitySaveTool
             return GetDataInternal(type, _sceneContext);
         }
 
-        async Task ISceneDataExplorerContext.Save<T>(T data) where T : class
+        T ISceneDataExplorerContext.GetData<T>()
+        {
+            return GetDataInternal(typeof(T), _sceneContext) as T;
+        }
+
+        async UniTask ISceneDataExplorerContext.Save<T>(T data) where T : class
         {
             await SaveDataInternal(data, _sceneContext, _saveCellIndex.ToString(), _sceneName);
         }
@@ -140,13 +155,16 @@ namespace UnitySaveTool
 
         private object GetDataInternal(Type type, Dictionary<Type, object> context)
         {
-            if (context.ContainsKey(type) == false)
-                return null;
+            if (context.ContainsKey(type))
+                return context[type];
 
-            return context[type];
+            if (type.GetConstructor(Type.EmptyTypes) != null)
+                return Activator.CreateInstance(type);
+
+            return null;
         }
 
-        private async Task SaveDataInternal(object data, Dictionary<Type, object> context, params string[] foldersPath)
+        private async UniTask SaveDataInternal(object data, Dictionary<Type, object> context, params string[] foldersPath)
         {
             Type dataType = data.GetType();
 
@@ -158,7 +176,7 @@ namespace UnitySaveTool
             await _fileSystem.Save(data, foldersPath);
         }
 
-        public async Task OpenSceneDataSet(string sceneName)
+        public async UniTask OpenSceneDataSet(string sceneName)
         {
             if (SaveCellDataSet == null)
                 await GlobalDataSet.OpenSaveCell();
@@ -166,7 +184,7 @@ namespace UnitySaveTool
             await SaveCellDataSet.OpenScene(sceneName);
         }
 
-        public async Task SaveAll()
+        public async UniTask SaveAll()
         {
             if (SceneDataSet != null)
                 await _fileSystem.SaveAll(_sceneContext, _saveCellIndex.ToString(), _sceneName);
@@ -190,28 +208,5 @@ namespace UnitySaveTool
         {
             _saveCell = saveCell;
         }
-    }
-
-    public interface IGlobalDataExplorerContext
-    {
-        Task<ISaveCellExplorerContext> OpenSaveCell();
-        Task<ISaveCellExplorerContext> OpenSaveCell(int cellIndex);
-
-        object GetData(Type type);
-        Task Save<T>(T data) where T : class;
-    }
-
-    public interface ISaveCellExplorerContext
-    {
-        Task<ISceneDataExplorerContext> OpenScene(string sceneName);
-
-        object GetData(Type type);
-        Task Save<T>(T data) where T : class;
-    }
-
-    public interface ISceneDataExplorerContext
-    {
-        object GetData(Type type);
-        Task Save<T>(T data) where T : class;
     }
 }
