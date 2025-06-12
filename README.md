@@ -4,9 +4,9 @@
 # Введение
 Предположим, вам нужно сделать механизм сохранения некоторых внутриигровых данных. Самое простое, что может прийти в голову это PlayerPrefs:
 ```c#
-private int _playerHealth = 99
+private int _health = 100
 ...
-PlayerPrefs.SetInt("PlayerHealth", _playerHealth);
+PlayerPrefs.SetInt("PlayerHealth", _health);
 PlayerPrefs.Save();
 ```
 В настолько простом примере все работает: мы сохранили текущее значение здоровья игрока в PlayerPrefs с помощью ключа "PlayerHealth". 
