@@ -9,6 +9,8 @@ namespace UnitySaveTool
 {
     public class FileSystem : IFileSystem
     {
+        private readonly string _globalPath;
+
         private IDataConverter _dataConverter;
 
         private Dictionary<string, Dictionary<Type, object>> _cachedDirectoryes;
@@ -18,6 +20,13 @@ namespace UnitySaveTool
             _dataConverter = dataConverter;
 
             _cachedDirectoryes = new();
+
+            _globalPath = Application.persistentDataPath + "/UnitySaveTool";
+        }
+
+        public FileSystem(IDataConverter dataConverter, string globalPath) : this(dataConverter) 
+        {
+            _globalPath = globalPath;
         }
 
         public async UniTask Save(object objectToSave, params string[] folders)
@@ -86,15 +95,20 @@ namespace UnitySaveTool
 
         private string GetFullPath(bool pathMustExist, params string[] folders)
         {
-            StringBuilder checkedPath = new(Application.persistentDataPath);
+            if (Directory.Exists(_globalPath) == false)
+                Directory.CreateDirectory(_globalPath);
+
+            StringBuilder checkedPath = new(_globalPath);
 
             foreach (string folder in folders)
             {
                 checkedPath.Append("/");
                 checkedPath.Append(folder);
 
-                if (pathMustExist && (Directory.Exists(checkedPath.ToString()) == false))
-                    Directory.CreateDirectory(checkedPath.ToString());
+                string checkedPathString = checkedPath.ToString();
+
+                if (pathMustExist && (Directory.Exists(checkedPathString) == false))
+                    Directory.CreateDirectory(checkedPathString);
             }
 
             if (Directory.Exists(checkedPath.ToString()) == false)

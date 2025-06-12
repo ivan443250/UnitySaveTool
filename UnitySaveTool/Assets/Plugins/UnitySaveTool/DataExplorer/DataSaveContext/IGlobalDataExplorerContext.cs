@@ -1,6 +1,5 @@
 using Cysharp.Threading.Tasks;
 using System;
-using System.Threading.Tasks;
 
 namespace UnitySaveTool
 {
@@ -13,5 +12,6 @@ namespace UnitySaveTool
         T GetData<T>() where T : class;
 
         UniTask Save<T>(T data) where T : class;
+        UniTask SaveAll();
     }
 }

@@ -88,6 +88,11 @@ namespace UnitySaveTool
             await SaveDataInternal(data, _globalContext);
         }
 
+        async UniTask IGlobalDataExplorerContext.SaveAll()
+        {
+            await _fileSystem.SaveAll(_globalContext);
+        }
+
         private async UniTask<ISaveCellExplorerContext> OpenSaveCellInternal(int cellIndex)
         {
             if (cellIndex < 0)
@@ -117,14 +122,14 @@ namespace UnitySaveTool
             return this;
         }
 
-        object ISaveCellExplorerContext.GetData(Type type)
+        object ISaveCellExplorerContext.GetData(Type type, bool createIfNot)
         {
-            return GetDataInternal(type, _cellContext);
+            return GetDataInternal(type, _cellContext, createIfNot);
         }
 
-        T ISaveCellExplorerContext.GetData<T>()
+        T ISaveCellExplorerContext.GetData<T>(bool createIfNot)
         {
-            return GetDataInternal(typeof(T), _cellContext) as T;
+            return GetDataInternal(typeof(T), _cellContext, createIfNot) as T;
         }
 
         async UniTask ISaveCellExplorerContext.Save<T>(T data) where T : class
@@ -132,18 +137,28 @@ namespace UnitySaveTool
             await SaveDataInternal(data, _cellContext, _saveCellIndex.ToString());
         }
 
+        async UniTask ISaveCellExplorerContext.SaveAll()
+        {
+            await _fileSystem.SaveAll(_cellContext, _saveCellIndex.ToString());
+        }
+
         #endregion
 
         #region ISceneDataExplorerContext API
 
-        object ISceneDataExplorerContext.GetData(Type type)
+        object ISceneDataExplorerContext.GetData(Type type, bool createIfNot)
         {
-            return GetDataInternal(type, _sceneContext);
+            return GetDataInternal(type, _sceneContext, createIfNot);
         }
 
-        T ISceneDataExplorerContext.GetData<T>()
+        T ISceneDataExplorerContext.GetData<T>(bool createIfNot)
         {
-            return GetDataInternal(typeof(T), _sceneContext) as T;
+            return GetDataInternal(typeof(T), _sceneContext, createIfNot) as T;
+        }
+
+        HashSet<Type> ISceneDataExplorerContext.GetAllDataTypes()
+        {
+            return new HashSet<Type>(_sceneContext.Keys);
         }
 
         async UniTask ISceneDataExplorerContext.Save<T>(T data) where T : class
@@ -151,17 +166,22 @@ namespace UnitySaveTool
             await SaveDataInternal(data, _sceneContext, _saveCellIndex.ToString(), _sceneName);
         }
 
+        async UniTask ISceneDataExplorerContext.SaveAll()
+        {
+            await _fileSystem.SaveAll(_sceneContext, _saveCellIndex.ToString(), _sceneName);
+        }
+
         #endregion
 
-        private object GetDataInternal(Type type, Dictionary<Type, object> context)
+        private object GetDataInternal(Type type, Dictionary<Type, object> context, bool createIfNot = false)
         {
-            if (context.ContainsKey(type))
-                return context[type];
+            if (context.ContainsKey(type) == false && (type.GetConstructor(Type.EmptyTypes) == null || createIfNot == false))
+                return null;
 
-            if (type.GetConstructor(Type.EmptyTypes) != null)
-                return Activator.CreateInstance(type);
+            if (context.ContainsKey(type) == false)
+                context.Add(type, Activator.CreateInstance(type));
 
-            return null;
+            return context[type];
         }
 
         private async UniTask SaveDataInternal(object data, Dictionary<Type, object> context, params string[] foldersPath)
@@ -176,7 +196,7 @@ namespace UnitySaveTool
             await _fileSystem.Save(data, foldersPath);
         }
 
-        public async UniTask OpenSceneDataSet(string sceneName)
+        async UniTask IDataExplorer.OpenSceneDataSet(string sceneName)
         {
             if (SaveCellDataSet == null)
                 await GlobalDataSet.OpenSaveCell();
@@ -184,15 +204,15 @@ namespace UnitySaveTool
             await SaveCellDataSet.OpenScene(sceneName);
         }
 
-        public async UniTask SaveAll()
+        async UniTask IDataExplorer.SaveAll()
         {
             if (SceneDataSet != null)
-                await _fileSystem.SaveAll(_sceneContext, _saveCellIndex.ToString(), _sceneName);
+                await SceneDataSet.SaveAll();
 
             if (SaveCellDataSet != null)
-                await _fileSystem.SaveAll(_cellContext, _saveCellIndex.ToString());
+                await SaveCellDataSet.SaveAll();
 
-            await _fileSystem.SaveAll(_globalContext);
+            await GlobalDataSet.SaveAll();
         }
     }
 
