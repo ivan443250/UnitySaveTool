@@ -11,7 +11,7 @@ namespace UnitySaveTool
 
         HashSet<Type> GetAllDataTypes();
 
-        UniTask Save<T>(T data) where T : class;
-        UniTask SaveAll();
+        UniTask SaveAsync<T>(T data) where T : class;
+        UniTask SaveAllAsync();
     }
 }

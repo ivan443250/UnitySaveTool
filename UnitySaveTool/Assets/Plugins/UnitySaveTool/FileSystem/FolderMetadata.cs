@@ -17,7 +17,7 @@ namespace UnitySaveTool
         private HashSet<Type> _types;
         private IDataConverter _dataConverter;
 
-        public async static UniTask<IFolderFilesCollection> GetFilesCollection(string folderPath, IDataConverter dataConverter)
+        public async static UniTask<IFolderFilesCollection> GetFilesCollection(string folderPath, IDataConverter dataConverter, bool doAsync)
         {
             FolderMetadata folderMetadata;
 
@@ -29,7 +29,7 @@ namespace UnitySaveTool
             }
             else
             {
-                string metadataString = await File.ReadAllTextAsync(path);
+                string metadataString = doAsync ? await File.ReadAllTextAsync(path) : File.ReadAllText(path);
 
                 object metadataObj = dataConverter.ConvertToObject(metadataString, typeof(FolderMetadata));
 
@@ -65,7 +65,19 @@ namespace UnitySaveTool
             _serializableTypes = _types.Select(t => new SerializableType(t)).ToArray();
         }
 
-        public async UniTask Set(object obj)
+        #region SetMethods
+
+        public void Set(object obj)
+        {
+            _ = SetInternal(obj, false);
+        }
+
+        public async UniTask SetAsync(object obj)
+        {
+            await SetInternal(obj, true);
+        }
+
+        private async UniTask SetInternal(object obj, bool doAsync)
         {
             Type type = obj.GetType();
 
@@ -77,21 +89,62 @@ namespace UnitySaveTool
             if (_types.Contains(type))
                 throw new Exception();
 
-            await File.WriteAllTextAsync(path, _dataConverter.ConvertFromObject(obj));
+            if (doAsync)
+                await File.WriteAllTextAsync(path, _dataConverter.ConvertFromObject(obj));
+            else
+                File.WriteAllText(path, _dataConverter.ConvertFromObject(obj));
 
             _types.Add(type);
 
-            await Save();
+            if (doAsync)
+                await SaveAsync();
+            else
+                Save();
         }
 
-        public async UniTask Reset(object obj)
+        #endregion
+
+        #region ResetMethods
+
+        public void Reset(object obj)
         {
-            await Remove(obj.GetType());
-
-            await Set(obj);
+            _ = ResetInternal(obj, false);
         }
 
-        public async UniTask Remove(Type type)
+        public async UniTask ResetAsync(object obj)
+        {
+            await ResetInternal(obj, true);    
+        }
+
+        private async UniTask ResetInternal(object obj, bool doAsync)
+        {
+            if (doAsync)
+            {
+                await RemoveAsync(obj.GetType());
+                await SetAsync(obj);
+            }
+            else
+            {
+                Remove(obj.GetType());
+                Set(obj);
+            }
+        }
+
+        #endregion
+
+        #region RemoveMethods
+
+        public void Remove(Type type)
+        {
+            _ = RemoveInternal(type, false);
+        }
+
+        public async UniTask RemoveAsync(Type type)
+        {
+            await RemoveInternal(type, true);
+        }
+
+        private async UniTask RemoveInternal(Type type, bool doAsync)
         {
             string path = GetFullPath(type);
 
@@ -101,47 +154,97 @@ namespace UnitySaveTool
             File.Delete(path);
             _types.Remove(type);
 
-            await Save();
+            if (doAsync) 
+                await SaveAsync();
+            else 
+                Save();
         }
 
-        public async UniTask ClearAll()
+        #endregion
+
+        #region ClearAllMethods
+
+        public async UniTask ClearAllAsync()
         {
             foreach (Type type in _types)
-                await Remove(type);
+                await RemoveAsync(type);
         }
 
-        public bool HasType(Type type)
+        public void ClearAll()
         {
-            return _types.Contains(type);
+            foreach (Type type in _types)
+                Remove(type);
         }
 
-        public async UniTask<object> Get(Type type)
+        #endregion
+
+        #region GetMethods
+
+        public object Get(Type type)
+        {
+            return GetInternal(type, false).GetAwaiter().GetResult();
+        }
+
+        public async UniTask<object> GetAsync(Type type)
+        {
+            return await GetInternal(type, true);
+        }
+
+        private async UniTask<object> GetInternal(Type type, bool doAsync)
         {
             if (_types.Contains(type) == false)
                 return null;
 
             string path = GetFullPath(type);
 
-            string objectString = await File.ReadAllTextAsync(path);
+            string objectString = doAsync ? await File.ReadAllTextAsync(path) : File.ReadAllText(path);
 
             return _dataConverter.ConvertToObject(objectString, type);
         }
 
-        public async UniTask<Dictionary<Type, object>> GetAll()
+        #endregion
+
+        #region GetAllMethods
+
+        public Dictionary<Type, object> GetAll()
+        {
+            return GetAllInternal(false).GetAwaiter().GetResult();
+        }
+
+        public async UniTask<Dictionary<Type, object>> GetAllAsync()
+        {
+            return await GetAllInternal(true);
+        }
+
+        private async UniTask<Dictionary<Type, object>> GetAllInternal(bool doAsync)
         {
             Dictionary<Type, object> deserializedObjects = new();
 
             foreach (Type type in _types)
-                deserializedObjects.Add(type, await Get(type));
+                deserializedObjects.Add(type, doAsync ? await GetAsync(type) : Get(type));
 
             return deserializedObjects;
         }
 
-        private async UniTask Save()
+        #endregion
+
+        public bool HasType(Type type)
+        {
+            return _types.Contains(type);
+        }
+
+        private async UniTask SaveAsync()
         {
             string path = GetFullPath(typeof(FolderMetadata));
 
             await File.WriteAllTextAsync(path, _dataConverter.ConvertFromObject(this));
+        }
+
+        private void Save()
+        {
+            string path = GetFullPath(typeof(FolderMetadata));
+
+            File.WriteAllText(path, _dataConverter.ConvertFromObject(this));
         }
 
         private string GetFullPath(Type type)

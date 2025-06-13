@@ -5,13 +5,13 @@ namespace UnitySaveTool
 {
     public interface IGlobalDataExplorerContext
     {
-        UniTask<ISaveCellExplorerContext> OpenSaveCell();
-        UniTask<ISaveCellExplorerContext> OpenSaveCell(int cellIndex);
+        UniTask<ISaveCellExplorerContext> OpenSaveCellAsync();
+        UniTask<ISaveCellExplorerContext> OpenSaveCellAsync(int cellIndex);
 
         object GetData(Type type);
         T GetData<T>() where T : class;
 
-        UniTask Save<T>(T data) where T : class;
-        UniTask SaveAll();
+        UniTask SaveAsync<T>(T data) where T : class;
+        UniTask SaveAllAsync();
     }
 }

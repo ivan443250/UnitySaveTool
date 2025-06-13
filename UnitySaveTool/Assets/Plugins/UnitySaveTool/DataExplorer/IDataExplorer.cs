@@ -8,7 +8,7 @@ namespace UnitySaveTool
         ISaveCellExplorerContext SaveCellDataSet { get; }
         ISceneDataExplorerContext SceneDataSet { get; }
 
-        UniTask OpenSceneDataSet(string sceneName);
-        UniTask SaveAll();
+        UniTask OpenSceneDataSetAsync(string sceneName);
+        UniTask SaveAllAsync();
     }
 }

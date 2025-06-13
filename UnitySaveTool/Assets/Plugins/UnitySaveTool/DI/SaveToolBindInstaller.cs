@@ -1,5 +1,7 @@
 using Cysharp.Threading.Tasks;
 using System;
+using System.Reflection;
+using UnityEngine;
 
 namespace UnitySaveTool
 {
@@ -9,39 +11,33 @@ namespace UnitySaveTool
 
         private readonly IDataExplorer _dataExplorer;
 
-        public SaveToolBindInstaller(IDIContainer globalContext)
+        public SaveToolBindInstaller(IDIContainer globalContext, IDataExplorer dataExplorer)
         {
             _globalContext = globalContext;
 
-            InstallDefaultBindings();
-
-            _dataExplorer = _globalContext.Resolve<IDataExplorer>();
+            _dataExplorer = dataExplorer;
         }
 
-        private void InstallDefaultBindings()
+        public async UniTask InstallDataProviderInSceneContextAsync(string sceneName, IDIContainer sceneContext)
         {
-            if (_globalContext.HasBinding(typeof(IDataConverter)) == false)
-                _globalContext.RegisterInstance<IDataConverter>(new JsonUtilityDataConverter());
+            Debug.Log("1");
 
-            if (_globalContext.HasBinding(typeof(IFileSystem)) == false)
-                _globalContext.RegisterInstance<IFileSystem>(new FileSystem(_globalContext.Resolve<IDataConverter>()));
+            if (_dataExplorer.SceneDataSet != null)
+                await _dataExplorer.SceneDataSet.SaveAllAsync();
 
-            if (_globalContext.HasBinding(typeof(IDataExplorer)) == false)
-                _globalContext.RegisterInstance<IDataExplorer>(new DataExplorer(_globalContext.Resolve<IFileSystem>()));
-        }
+            await _dataExplorer.OpenSceneDataSetAsync(sceneName);
 
-        public async UniTask InstallDataProviderInSceneContext(string sceneName, IDIContainer sceneContext)
-        {
-            _dataExplorer.SceneDataSet?.SaveAll();
+            sceneContext.RegisterProvdier(this);
 
-            await _dataExplorer.OpenSceneDataSet(sceneName);
-
-            sceneContext.InstallProvdier(this);
+            Debug.Log("2");
         }
 
         public object GetInstance(Type typeToResolve)
         {
-            return _dataExplorer.SceneDataSet.GetData(typeToResolve, true);
+            if (HasInstance(typeToResolve))
+                return _dataExplorer.SceneDataSet.GetData(typeToResolve, true);
+
+            return null;
         }
 
         public bool HasInstance(Type typeToResolve)
@@ -49,7 +45,7 @@ namespace UnitySaveTool
             if (_dataExplorer.SceneDataSet.GetAllDataTypes().Contains(typeToResolve))
                 return true;
 
-            if (typeToResolve.GetConstructor(Type.EmptyTypes) != null)
+            if (typeToResolve.GetConstructor(Type.EmptyTypes) != null && typeToResolve.GetCustomAttribute<SaveToolDataAttribute>() != null)
                 return true;
 
             return false;

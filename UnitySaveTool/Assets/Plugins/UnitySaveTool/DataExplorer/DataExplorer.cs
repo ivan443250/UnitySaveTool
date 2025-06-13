@@ -9,6 +9,7 @@ namespace UnitySaveTool
         IGlobalDataExplorerContext, ISaveCellExplorerContext, ISceneDataExplorerContext
     {
         private readonly IFileSystem _fileSystem;
+        private readonly IAsyncFileSystem _asyncFileSystem;
 
         private string _sceneName;
 
@@ -49,18 +50,19 @@ namespace UnitySaveTool
 
         #endregion
 
-        public DataExplorer(IFileSystem fileSystem)
+        public DataExplorer(IFileSystem fileSystem, IAsyncFileSystem asyncFileSystem)
         {
             _fileSystem = fileSystem;
+            _asyncFileSystem = asyncFileSystem;
 
             _saveCellIndex = -1;
         }
 
         #region IGlobalDataExplorerContext API
 
-        async UniTask<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCell()
+        async UniTask<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCellAsync()
         {
-            _globalContext = await _fileSystem.LoadAll();
+            _globalContext = await _asyncFileSystem.LoadAllAsync();
 
             if (_globalContext.ContainsKey(typeof(SavedContext)) == false)
                 return await OpenSaveCellInternal(0);
@@ -68,7 +70,7 @@ namespace UnitySaveTool
                 return await OpenSaveCellInternal((_globalContext[typeof(SavedContext)] as SavedContext).SaveCell);
         }
 
-        async UniTask<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCell(int cellIndex)
+        async UniTask<ISaveCellExplorerContext> IGlobalDataExplorerContext.OpenSaveCellAsync(int cellIndex)
         {
             return await OpenSaveCellInternal(cellIndex);
         }
@@ -83,14 +85,14 @@ namespace UnitySaveTool
             return GetDataInternal(typeof(T), _globalContext) as T;
         }
 
-        async UniTask IGlobalDataExplorerContext.Save<T>(T data) where T : class
+        async UniTask IGlobalDataExplorerContext.SaveAsync<T>(T data) where T : class
         {
             await SaveDataInternal(data, _globalContext);
         }
 
-        async UniTask IGlobalDataExplorerContext.SaveAll()
+        async UniTask IGlobalDataExplorerContext.SaveAllAsync()
         {
-            await _fileSystem.SaveAll(_globalContext);
+            await _asyncFileSystem.SaveAllAsync(_globalContext);
         }
 
         private async UniTask<ISaveCellExplorerContext> OpenSaveCellInternal(int cellIndex)
@@ -98,13 +100,13 @@ namespace UnitySaveTool
             if (cellIndex < 0)
                 throw new ArgumentOutOfRangeException("Save Cell Index can not be less than 0");
 
-            await _fileSystem.Save(new SavedContext(cellIndex));
+            await _asyncFileSystem.SaveAsync(new SavedContext(cellIndex));
 
-            _globalContext = await _fileSystem.LoadAll();
+            _globalContext = await _asyncFileSystem.LoadAllAsync();
 
             _saveCellIndex = cellIndex;
 
-            _cellContext = await _fileSystem.LoadAll(cellIndex.ToString());
+            _cellContext = await _asyncFileSystem.LoadAllAsync(cellIndex.ToString());
 
             return this;
         }
@@ -113,11 +115,11 @@ namespace UnitySaveTool
 
         #region ISaveCellExplorerContext API    
 
-        async UniTask<ISceneDataExplorerContext> ISaveCellExplorerContext.OpenScene(string sceneName)
+        async UniTask<ISceneDataExplorerContext> ISaveCellExplorerContext.OpenSceneAsync(string sceneName)
         {
             _sceneName = sceneName;
 
-            _sceneContext = await _fileSystem.LoadAll(_saveCellIndex.ToString(), sceneName);
+            _sceneContext = await _asyncFileSystem.LoadAllAsync(_saveCellIndex.ToString(), sceneName);
 
             return this;
         }
@@ -132,14 +134,14 @@ namespace UnitySaveTool
             return GetDataInternal(typeof(T), _cellContext, createIfNot) as T;
         }
 
-        async UniTask ISaveCellExplorerContext.Save<T>(T data) where T : class
+        async UniTask ISaveCellExplorerContext.SaveAsync<T>(T data) where T : class
         {
             await SaveDataInternal(data, _cellContext, _saveCellIndex.ToString());
         }
 
-        async UniTask ISaveCellExplorerContext.SaveAll()
+        async UniTask ISaveCellExplorerContext.SaveAllAsync()
         {
-            await _fileSystem.SaveAll(_cellContext, _saveCellIndex.ToString());
+            await _asyncFileSystem.SaveAllAsync(_cellContext, _saveCellIndex.ToString());
         }
 
         #endregion
@@ -161,14 +163,14 @@ namespace UnitySaveTool
             return new HashSet<Type>(_sceneContext.Keys);
         }
 
-        async UniTask ISceneDataExplorerContext.Save<T>(T data) where T : class
+        async UniTask ISceneDataExplorerContext.SaveAsync<T>(T data) where T : class
         {
             await SaveDataInternal(data, _sceneContext, _saveCellIndex.ToString(), _sceneName);
         }
 
-        async UniTask ISceneDataExplorerContext.SaveAll()
+        async UniTask ISceneDataExplorerContext.SaveAllAsync()
         {
-            await _fileSystem.SaveAll(_sceneContext, _saveCellIndex.ToString(), _sceneName);
+            await _asyncFileSystem.SaveAllAsync(_sceneContext, _saveCellIndex.ToString(), _sceneName);
         }
 
         #endregion
@@ -193,26 +195,26 @@ namespace UnitySaveTool
 
             context[dataType] = data;
 
-            await _fileSystem.Save(data, foldersPath);
+            await _asyncFileSystem.SaveAsync(data, foldersPath);
         }
 
-        async UniTask IDataExplorer.OpenSceneDataSet(string sceneName)
+        async UniTask IDataExplorer.OpenSceneDataSetAsync(string sceneName)
         {
             if (SaveCellDataSet == null)
-                await GlobalDataSet.OpenSaveCell();
+                await GlobalDataSet.OpenSaveCellAsync();
 
-            await SaveCellDataSet.OpenScene(sceneName);
+            await SaveCellDataSet.OpenSceneAsync(sceneName);
         }
 
-        async UniTask IDataExplorer.SaveAll()
+        async UniTask IDataExplorer.SaveAllAsync()
         {
             if (SceneDataSet != null)
-                await SceneDataSet.SaveAll();
+                await SceneDataSet.SaveAllAsync();
 
             if (SaveCellDataSet != null)
-                await SaveCellDataSet.SaveAll();
+                await SaveCellDataSet.SaveAllAsync();
 
-            await GlobalDataSet.SaveAll();
+            await GlobalDataSet.SaveAllAsync();
         }
     }
 

@@ -5,6 +5,6 @@ namespace UnitySaveTool
 {
     public interface ISaveToolBindInstaller
     {
-        UniTask InstallDataProviderInSceneContext(string sceneName, IDIContainer sceneContext);
+        UniTask InstallDataProviderInSceneContextAsync(string sceneName, IDIContainer sceneContext);
     }
 }

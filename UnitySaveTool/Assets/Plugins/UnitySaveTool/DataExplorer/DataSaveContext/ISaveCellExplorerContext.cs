@@ -5,12 +5,12 @@ namespace UnitySaveTool
 {
     public interface ISaveCellExplorerContext
     {
-        UniTask<ISceneDataExplorerContext> OpenScene(string sceneName);
+        UniTask<ISceneDataExplorerContext> OpenSceneAsync(string sceneName);
 
         object GetData(Type type, bool createIfNot = false);
         T GetData<T>(bool createIfNot = false) where T : class;
 
-        UniTask Save<T>(T data) where T : class;
-        UniTask SaveAll();
+        UniTask SaveAsync<T>(T data) where T : class;
+        UniTask SaveAllAsync();
     }
 }
