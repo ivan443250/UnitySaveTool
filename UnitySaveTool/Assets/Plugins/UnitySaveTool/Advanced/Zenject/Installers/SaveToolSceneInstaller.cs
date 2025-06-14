@@ -6,6 +6,7 @@ namespace UnitySaveTool.Advanced
     public class SaveToolSceneInstaller : MonoInstaller
     {
         [Inject] ISaveToolBindInstaller _bindInstaller;
+        [Inject] IDataExplorer _explorer;
 
         public override void InstallBindings()
         {
@@ -13,6 +14,11 @@ namespace UnitySaveTool.Advanced
             ZenjectDIContainer containerInterface = new ZenjectDIContainer(Container);
 
             _bindInstaller.InstallDataProviderInSceneContext(sceneName, containerInterface);
+        }
+
+        private void OnDestroy()
+        {
+            _explorer.SceneDataSet.SaveAll();
         }
     }
 }
