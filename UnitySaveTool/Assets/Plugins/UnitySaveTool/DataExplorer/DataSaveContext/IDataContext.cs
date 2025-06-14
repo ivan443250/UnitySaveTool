@@ -1,17 +1,15 @@
-using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 
 namespace UnitySaveTool
 {
-    public interface ISceneDataExplorerContext
+    public interface IDataContext
     {
+        HashSet<Type> GetAllDataTypes();
+
         object GetData(Type type, bool createIfNot = false);
         T GetData<T>(bool createIfNot = false) where T : class;
 
-        HashSet<Type> GetAllDataTypes();
-
-        UniTask SaveAsync<T>(T data) where T : class;
-        UniTask SaveAllAsync();
+        bool CheckTypeAddCondition(Type type);
     }
 }

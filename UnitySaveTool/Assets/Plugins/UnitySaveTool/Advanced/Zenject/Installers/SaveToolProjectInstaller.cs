@@ -13,8 +13,13 @@ namespace UnitySaveTool.Advanced
                 .AsSingle();
 
             Container
-                .Bind<IFileSystem>()
+                .Bind(typeof(IFileSystem), typeof(IAsyncFileSystem))
                 .To<FileSystem>()
+                .AsSingle();
+
+            Container
+                .Bind<IGlobalDataContext>()
+                .To<GlobalDataContext>()
                 .AsSingle();
 
             Container
@@ -31,8 +36,6 @@ namespace UnitySaveTool.Advanced
                 .Bind<ISaveToolBindInstaller>()
                 .To<SaveToolBindInstaller>()
                 .AsSingle();
-
-            Debug.Log("SaveToolProjectInstaller");
         }
     }
 }

@@ -17,7 +17,37 @@ namespace UnitySaveTool
         private HashSet<Type> _types;
         private IDataConverter _dataConverter;
 
-        public async static UniTask<IFolderFilesCollection> GetFilesCollection(string folderPath, IDataConverter dataConverter, bool doAsync)
+        public async static UniTask<IFolderFilesCollection> GetFilesCollectionAsync(string folderPath, IDataConverter dataConverter)
+        {
+            Debug.Log("GetFilesCollection");
+            FolderMetadata folderMetadata;
+
+            string path = GetFullPath(folderPath, typeof(FolderMetadata));
+
+            if (File.Exists(path) == false)
+            {
+                folderMetadata = new(folderPath);
+            }
+            else
+            {
+                string metadataString = await File.ReadAllTextAsync(path);
+
+                object metadataObj = dataConverter.ConvertToObject(metadataString, typeof(FolderMetadata));
+
+                if (metadataObj is not FolderMetadata folderMetadataExample)
+                    throw new Exception();
+
+                folderMetadata = folderMetadataExample;
+            }
+
+            folderMetadata._dataConverter = dataConverter;
+
+            Debug.Log("GetFilesCollection");
+
+            return folderMetadata;
+        }
+
+        public static IFolderFilesCollection GetFilesCollection(string folderPath, IDataConverter dataConverter)
         {
             FolderMetadata folderMetadata;
 
@@ -29,7 +59,7 @@ namespace UnitySaveTool
             }
             else
             {
-                string metadataString = doAsync ? await File.ReadAllTextAsync(path) : File.ReadAllText(path);
+                string metadataString = File.ReadAllText(path);
 
                 object metadataObj = dataConverter.ConvertToObject(metadataString, typeof(FolderMetadata));
 
@@ -69,15 +99,24 @@ namespace UnitySaveTool
 
         public void Set(object obj)
         {
-            _ = SetInternal(obj, false);
+            Type type = obj.GetType();
+
+            if (type == typeof(FolderMetadata))
+                throw new Exception();
+
+            string path = GetFullPath(type);
+
+            if (_types.Contains(type))
+                throw new Exception();
+
+            File.WriteAllText(path, _dataConverter.ConvertFromObject(obj));
+
+            _types.Add(type);
+
+            Save();
         }
 
         public async UniTask SetAsync(object obj)
-        {
-            await SetInternal(obj, true);
-        }
-
-        private async UniTask SetInternal(object obj, bool doAsync)
         {
             Type type = obj.GetType();
 
@@ -89,17 +128,11 @@ namespace UnitySaveTool
             if (_types.Contains(type))
                 throw new Exception();
 
-            if (doAsync)
-                await File.WriteAllTextAsync(path, _dataConverter.ConvertFromObject(obj));
-            else
-                File.WriteAllText(path, _dataConverter.ConvertFromObject(obj));
+            await File.WriteAllTextAsync(path, _dataConverter.ConvertFromObject(obj));
 
             _types.Add(type);
 
-            if (doAsync)
-                await SaveAsync();
-            else
-                Save();
+            await SaveAsync();
         }
 
         #endregion
@@ -108,26 +141,14 @@ namespace UnitySaveTool
 
         public void Reset(object obj)
         {
-            _ = ResetInternal(obj, false);
+            Remove(obj.GetType());
+            Set(obj);
         }
 
         public async UniTask ResetAsync(object obj)
         {
-            await ResetInternal(obj, true);    
-        }
-
-        private async UniTask ResetInternal(object obj, bool doAsync)
-        {
-            if (doAsync)
-            {
-                await RemoveAsync(obj.GetType());
-                await SetAsync(obj);
-            }
-            else
-            {
-                Remove(obj.GetType());
-                Set(obj);
-            }
+            await RemoveAsync(obj.GetType());
+            await SetAsync(obj);
         }
 
         #endregion
@@ -136,15 +157,19 @@ namespace UnitySaveTool
 
         public void Remove(Type type)
         {
-            _ = RemoveInternal(type, false);
+            RemoveInternal(type);
+
+            Save();
         }
 
         public async UniTask RemoveAsync(Type type)
         {
-            await RemoveInternal(type, true);
+            RemoveInternal(type);
+
+            await SaveAsync();
         }
 
-        private async UniTask RemoveInternal(Type type, bool doAsync)
+        private void RemoveInternal(Type type)
         {
             string path = GetFullPath(type);
 
@@ -153,11 +178,6 @@ namespace UnitySaveTool
 
             File.Delete(path);
             _types.Remove(type);
-
-            if (doAsync) 
-                await SaveAsync();
-            else 
-                Save();
         }
 
         #endregion
@@ -182,22 +202,24 @@ namespace UnitySaveTool
 
         public object Get(Type type)
         {
-            return GetInternal(type, false).GetAwaiter().GetResult();
+            if (_types.Contains(type) == false)
+                return null;
+
+            string path = GetFullPath(type);
+
+            string objectString = File.ReadAllText(path);
+
+            return _dataConverter.ConvertToObject(objectString, type);
         }
 
         public async UniTask<object> GetAsync(Type type)
-        {
-            return await GetInternal(type, true);
-        }
-
-        private async UniTask<object> GetInternal(Type type, bool doAsync)
         {
             if (_types.Contains(type) == false)
                 return null;
 
             string path = GetFullPath(type);
 
-            string objectString = doAsync ? await File.ReadAllTextAsync(path) : File.ReadAllText(path);
+            string objectString = await File.ReadAllTextAsync(path);
 
             return _dataConverter.ConvertToObject(objectString, type);
         }
@@ -208,20 +230,20 @@ namespace UnitySaveTool
 
         public Dictionary<Type, object> GetAll()
         {
-            return GetAllInternal(false).GetAwaiter().GetResult();
+            Dictionary<Type, object> deserializedObjects = new();
+
+            foreach (Type type in _types)
+                deserializedObjects.Add(type, Get(type));
+
+            return deserializedObjects;
         }
 
         public async UniTask<Dictionary<Type, object>> GetAllAsync()
         {
-            return await GetAllInternal(true);
-        }
-
-        private async UniTask<Dictionary<Type, object>> GetAllInternal(bool doAsync)
-        {
             Dictionary<Type, object> deserializedObjects = new();
 
             foreach (Type type in _types)
-                deserializedObjects.Add(type, doAsync ? await GetAsync(type) : Get(type));
+                deserializedObjects.Add(type, await GetAsync(type));
 
             return deserializedObjects;
         }

@@ -4,9 +4,12 @@ namespace UnitySaveTool
 {
     public interface IDataExplorer
     {
-        IGlobalDataExplorerContext GlobalDataSet { get; }
-        ISaveCellExplorerContext SaveCellDataSet { get; }
-        ISceneDataExplorerContext SceneDataSet { get; }
+        IGlobalDataContext GlobalDataSet { get; }
+        ISaveCellContext SaveCellDataSet { get; }
+        ISceneDataContext SceneDataSet { get; }
+
+        void OpenSceneDataSet(string sceneName);
+        void SaveAll();
 
         UniTask OpenSceneDataSetAsync(string sceneName);
         UniTask SaveAllAsync();

@@ -1,4 +1,5 @@
 using System;
+using UnitySaveTool.Tools;
 using Zenject;
 
 namespace UnitySaveTool.Advanced
@@ -22,7 +23,13 @@ namespace UnitySaveTool.Advanced
 
         public void RegisterProvdier(IProvider provider)
         {
-            _diContainer.RegisterProvider(new BindingId(typeof(object), null), null, new ZenjectProvider(provider, _diContainer), true);
+            foreach (Type type in AttributeTypeFinder.GetTypesWithAttribute<SaveToolDataAttribute>())
+            {
+                if (provider.HasInstance(type) == false)
+                    throw new InvalidOperationException();
+
+                _diContainer.Bind(type).FromInstance(provider.GetInstance(type));
+            }
         }
 
         public void RegisterInstance<TInterface>(TInterface instance)

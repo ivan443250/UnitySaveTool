@@ -1,7 +1,5 @@
 using Cysharp.Threading.Tasks;
 using System;
-using System.Reflection;
-using UnityEngine;
 
 namespace UnitySaveTool
 {
@@ -20,16 +18,16 @@ namespace UnitySaveTool
 
         public async UniTask InstallDataProviderInSceneContextAsync(string sceneName, IDIContainer sceneContext)
         {
-            Debug.Log("1");
-
-            if (_dataExplorer.SceneDataSet != null)
-                await _dataExplorer.SceneDataSet.SaveAllAsync();
-
             await _dataExplorer.OpenSceneDataSetAsync(sceneName);
 
             sceneContext.RegisterProvdier(this);
+        }
 
-            Debug.Log("2");
+        public void InstallDataProviderInSceneContext(string sceneName, IDIContainer sceneContext)
+        {
+            _dataExplorer.OpenSceneDataSet(sceneName);
+
+            sceneContext.RegisterProvdier(this);
         }
 
         public object GetInstance(Type typeToResolve)
@@ -45,10 +43,7 @@ namespace UnitySaveTool
             if (_dataExplorer.SceneDataSet.GetAllDataTypes().Contains(typeToResolve))
                 return true;
 
-            if (typeToResolve.GetConstructor(Type.EmptyTypes) != null && typeToResolve.GetCustomAttribute<SaveToolDataAttribute>() != null)
-                return true;
-
-            return false;
+            return _dataExplorer.SceneDataSet.CheckTypeAddCondition(typeToResolve);
         }
 
         public Type GetInstanceType(Type typeToResolve)
