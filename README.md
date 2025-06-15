@@ -151,7 +151,24 @@ public class Player : MonoBehaviour
 Следующий пример будет показан с использованием DI фреймворка Zenject. Рекомендуется использовать библиотеку в сочетании с каким-либо DI контейнером. Как подключить DI контейнер, помимо Zenject, смотри здесь
 
 1. Скачайте и установите в свой проект UnitySaveTool.unitypackage. Все будет установлено в [Assets => Plugins => UnitySaveTool]
-2. 
+2. Добавьте на префаб ProjectContext компонент SaveToolProjectInstaller:
+   
+![ProjectInstaller.png](ReadmeImages/ProjectInstaller.png)
+
+3. Также следует добавить SaveToolSceneInstaller на все контексты сцен, где вы хотите использовать сохранения.
+
+4. Чтобы указать, что тип данных не зарегистрирован в DI контейнере заранее и что библиотека должна зарегистрировать его там сама, а также чтобы показать в каком контексте сохранять этот тип данных, нужно классу данных добавить атрибут SaveToolData:
+```C#
+[Serializable]
+[SaveToolData(SaveContext.Scene)] 
+public class TestSaveData
+{
+    ...
+}
+// SaveContext.Scene показывает, что класс будет сохраняться в контексте сцен, на которых используется
+```
+
+
 
 
 
