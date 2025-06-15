@@ -1,18 +1,17 @@
 # UnitySaveTool
 Библиотека для удобного сохранения информации в вашем приложении на Unity
-Принцип работы JSON + File.IO
-# Основные преимущества:
+## Основные преимущества:
 * **Простота использования**
     - Если в проекте используется DI фреймворк, то сохраняемые типы данных будут зарегистрированы как зависимости и DI контейнер автоматически внедрит их.
-    - Библиотека уже поддерживает такую работу с zenject, для работы с другими DI фреймворками смотри здесь.
+    - Библиотека уже поддерживает такую работу с Zenject, для работы с другими DI фреймворками смотри здесь.
 * **Возможность выбирать контекст сохранения**
     - **[Глобальный контекст]** Для сохранения данных в области видимости всего проекта (Настройки, кеш и т.д.)
     - **[Контекст игрового прогресса]** Для данных игрового прогресса которые не привязаны к конкретной сцене (Инвентарь игрока, количество смертей и т.д.)
     - **[Контекст сцены]** Для сохранения данных о конкретной сцене. Данные сцены защищены от доступа или изменения из другой сцены (Случайно сгенерированная карта, позиции передвинутых игроком предметов и т.д.)
 * **Модульность и расширяемость**
     - Можно заменить или расширить функционал отдельных частей, зарегистрировав собственные реализации интерфейсов библиотеки в DI контейнере
-# Введение 
-Возьмем тестовый класс TestSaveData, который нужно сохранить:
+## Проблема, которую решает библиотека
+Представим, что есть класс TestSaveData, который нужно сохранить:
 ```C#
 [Serializable]
 public class TestSaveData
@@ -64,6 +63,84 @@ public class Player : MonoBehaviour
     public void ChangeData()
     {
         //Изменяю TestSaveData
+    }
+}
+```
+Нет приин пересохранения TestSaveData в середине жизненного цикла класса Player. Поэтому достаточно просто гарантировать, что вначале жизненного цикла класса Player класс TestSaveData загрузился из памяти, а в конце был сохранен обратно. Вот обычная реализация этой идеи на практике (JSON + File IO):
+```C#
+public class Player : MonoBehaviour
+{
+    private TestSaveData testSaveData;
+    private string savePath;
+
+    public void ChangeData()
+    {
+        //Изменяю TestSaveData
+    }
+
+    private void Awake()
+    {
+        savePath = Path.Combine(Application.persistentDataPath, "saveData.json");
+        LoadData();
+    }
+
+    private void OnDestroy()
+    {
+        SaveData();
+    }
+
+    private void LoadData()
+    {
+        if (File.Exists(savePath))
+        {
+            string jsonData = File.ReadAllText(savePath);
+            testSaveData = JsonUtility.FromJson<TestSaveData>(jsonData);
+        }
+        else
+        {
+            testSaveData = new TestSaveData();
+        }
+    }
+
+    private void SaveData()
+    {
+        string jsonData = JsonUtility.ToJson(testSaveData, true);
+        File.WriteAllText(savePath, jsonData);
+    }
+}
+```
+
+Такая реализация будет работать, но есть ряд больших недостатков:
+* Нарушается один из принципов SOLID (Single Responsibility Principle). Подразумевается, что класс Player обрабатывает и изменяет информацию во время игры (Для примера это метод ChangeData). Но кроме этого Player также занимется логикой сохранения этой информации на довольно низком уровне (Вплоть до записи в файл)
+* Большое количество объектов в игре, также требующих сохранения, создадут хаос в месте, где они расположены. Сохранение объектов подобным образом, без единой системы сохранения, может привести к ошибкам из-за одинакового названия файлов или еще чего-то
+* Нет возможности создать еще одну ячейку игрового прогресса. Чтобы все сцены были одинаковыми, а разными на них только данные созданные игроком (ресурсы игрока, изменения в на катре от действий игрока и т.д.)
+
+Такие рассуждения могут привести к идее рефакторинга с вынесением системы сохранения в отдельный сервис. Вот пример рефакторинга с использованием Zenject:
+```C#
+public class Player : MonoBehaviour
+{
+    private TestSaveData testSaveData;
+    private string savePath;
+
+    private ISaveService _saveService;
+
+    [Inject]
+    public void Construct(ISaveService saveService)
+    {
+        _saveService = saveService;
+
+        savePath = Path.Combine(Application.persistentDataPath, "saveData.json");
+        testSaveData = _saveService.Load<TestSaveData>(savePath);
+    }
+
+    public void ChangeData()
+    {
+        //Изменяю TestSaveData
+    }
+
+    private void OnDestroy()
+    {
+        _saveService.Save(testSaveData, savePath);
     }
 }
 ```
