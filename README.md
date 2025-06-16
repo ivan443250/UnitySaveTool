@@ -59,11 +59,11 @@ public class TestSaveData
 ```C#
 public class Player : MonoBehaviour
 {
-    private TestSaveData testSaveData;
+    private TestSaveData _testSaveData;
 
     public void ChangeData()
     {
-        //Изменяю TestSaveData
+        //Изменяю _testSaveData
     }
 }
 ```
@@ -71,17 +71,17 @@ public class Player : MonoBehaviour
 ```C#
 public class Player : MonoBehaviour
 {
-    private TestSaveData testSaveData;
-    private string savePath;
+    private TestSaveData _testSaveData;
+    private string _savePath;
 
     public void ChangeData()
     {
-        //Изменяю TestSaveData
+        //Изменяю _testSaveData
     }
 
     private void Awake()
     {
-        savePath = Path.Combine(Application.persistentDataPath, "saveData.json");
+        _savePath = Path.Combine(Application.persistentDataPath, "saveData.json");
         LoadData();
     }
 
@@ -92,21 +92,21 @@ public class Player : MonoBehaviour
 
     private void LoadData()
     {
-        if (File.Exists(savePath))
+        if (File.Exists(_savePath))
         {
-            string jsonData = File.ReadAllText(savePath);
-            testSaveData = JsonUtility.FromJson<TestSaveData>(jsonData);
+            string jsonData = File.ReadAllText(_savePath);
+            _testSaveData = JsonUtility.FromJson<TestSaveData>(jsonData);
         }
         else
         {
-            testSaveData = new TestSaveData();
+            _testSaveData = new TestSaveData();
         }
     }
 
     private void SaveData()
     {
-        string jsonData = JsonUtility.ToJson(testSaveData, true);
-        File.WriteAllText(savePath, jsonData);
+        string jsonData = JsonUtility.ToJson(_testSaveData, true);
+        File.WriteAllText(_savePath, jsonData);
     }
 }
 ```
@@ -120,8 +120,8 @@ public class Player : MonoBehaviour
 ```C#
 public class Player : MonoBehaviour
 {
-    private TestSaveData testSaveData;
-    private string savePath;
+    private TestSaveData _testSaveData;
+    private string _savePath;
 
     private ISaveService _saveService;
 
@@ -130,24 +130,24 @@ public class Player : MonoBehaviour
     {
         _saveService = saveService;
 
-        savePath = Path.Combine(Application.persistentDataPath, "saveData.json");
-        testSaveData = _saveService.Load<TestSaveData>(savePath);
+        _savePath = Path.Combine(Application.persistentDataPath, "saveData.json");
+        _testSaveData = _saveService.Load<TestSaveData>(savePath);
     }
 
     public void ChangeData()
     {
-        //Изменяю TestSaveData
+        //Изменяю _testSaveData
     }
 
     private void OnDestroy()
     {
-        _saveService.Save(testSaveData, savePath);
+        _saveService.Save(_testSaveData, _savePath);
     }
 }
 ```
 Несмотря на некоторые оставшиесля минусы, такое решение уже имеет место быть. С большим количеством данных все еще есть вероятность ошибок, ведь путь к файлам и их названия указываются разработчиком вручную. Также можно забыть загрузить или сохранить данные в начале и в конце жизненного цикла класса, работающего с этими данными. Несмотря на приемлемость такого способа, хочется иметь еще более простой и в то же время гибкий способ сохранять данные в игре. Именно такой способ и предоставляет библиотека UnitySaveTool.
 
-## Решение
+## Решение с UnitySaveTool
 Следующий пример будет показан с использованием DI фреймворка Zenject. Рекомендуется использовать библиотеку в сочетании с каким-либо DI контейнером. Как подключить DI контейнер, помимо Zenject, смотри здесь
 
 1. Скачайте и установите в свой проект UnitySaveTool.unitypackage. Все будет установлено в [Assets => Plugins => UnitySaveTool]
@@ -165,11 +165,69 @@ public class TestSaveData
 {
     ...
 }
-// SaveContext.Scene показывает, что класс будет сохраняться в контексте сцен, на которых используется
+// SaveContext.Scene указывает, что класс будет храниться в контексте сцен, на которых используется
 ```
 
+5. Все, что осталось сделать это просто запросить сохраняемые данные из контейнера
+```C#
+public class Player : MonoBehaviour
+{
+    [SerializeField] private TestSaveData _testSaveData;
 
+    [Inject]
+    public void Construct(TestSaveData testSaveData)
+    {
+        _testSaveData = testSaveData;
+    }
 
+    public void ChangeData()
+    {
+        //Изменяю _testSaveData
+    }
+}
+```
+
+Теперь вы можете создать сколько угодно сохраняемых типов данных, которые будут использоваться на сцене. Единственное условие - это наличие у сохраняемых типов данных атрибутов:
+```C#
+[Serializable]
+[SaveToolData(...)]
+```
+
+Все, что нужно объектам использующим эти типы данных это просто получить эти типы из контейнера. 
+Все объекты, представляющие данные будут загружены при старте сцены, а их измененные версии будут сохранены при выходе из сцены (Работает только со ссылочными типами, так как сохраняется объект, который лежит в контейнере. В следующих версиях будет добавлен механизм установки права на изменение объекта (в том числе и вещественного), чтобы любой класс на сцене не мог изменить любой ссылочный тип данных простым получением его из контейнера)
+
+## Как хранятся данные?
+После сохранений структура файлов по пути Application.persistentDataPath будет выглядеть так:
+```
+=> Папка с названием проекта
+    => UnitySaveTool
+        => SavedContext.json
+        => 0
+            => Папка с названием сцены
+                => TestSaveData.json
+```
+Папка "0" это папка которая будет хранить в себе данные игрового прогресса. 0 - это как бы индекс ячейки сохранения, а таких ячеек можно создать сколько угодно и настроить между ними удобное переключение. SavedContext.json как раз запоминает какая ячека выбрана и библиотека работает с ней по умолчанию. В папке UnitySaveTool помимо SavedContext.json и папок с ячейками сохранения будут также храниться данные, которые были сохранены в глобальном контексте. И наконец папки с названием сцен будут хранить в себе соответственно данные с этих сцен. 
+
+Приемущество библиотеки - поддержка четкой структуры в которой сохраняются файлы, и набор инструментов для удобного взаимодействия с ней
+
+## Центральная система управления сохранениями
+В библиотеке за логику переключения между контекстами сохранения отвечает реализация IDataExplorer
+
+Реализация этого интерфейса по умолчанию регистрируется в контейнер ProjectContext из установщика SaveToolProjectInstaller и вы всегда можете получть зависимость IDataExplorer из контейнера:
+```C#
+[Inject]
+public void Construct(IDataExplorer dataExplorer)
+{
+    _dataExplorer = dataExplorer;
+}
+```
+
+С помощью IDataExplorer можно обратиться к трем разным контекстам:
+```C#
+IGlobalDataContext globalContext = _dataExplorer.GlobalDataSet; // Глобальный контекст (1)
+ISaveCellContext saveCellContext = _dataExplorer.SaveCellDataSet; // Контекст ячейки сохранения (2)
+ISceneDataContext sceneDataContext = _dataExplorer.SceneDataSet; // Контекст сцены (3)
+```
 
 
 
