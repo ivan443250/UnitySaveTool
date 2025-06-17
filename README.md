@@ -191,6 +191,10 @@ public class Player : MonoBehaviour
 ```C#
 [Serializable]
 [SaveToolData(...)]
+// Вместо ...
+// SaveContext.Scene или
+// SaveContext.SaveCell или 
+// SaveContext.Global
 ```
 
 Все, что нужно объектам, использующим эти типы данных это просто получить эти типы из контейнера. 
