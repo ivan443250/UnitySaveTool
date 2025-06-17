@@ -7,7 +7,7 @@ namespace UnitySaveTool
         private readonly IGlobalDataContext _globalDataContext;
 
         public IGlobalDataContext GlobalDataSet => _globalDataContext;
-        public ISaveCellContext SaveCellDataSet => _globalDataContext.OpenedSaveCellContext;
+        public ISaveCellContext SaveCellDataSet => _globalDataContext.OpenedSaveCellContext ?? GlobalDataSet.OpenSaveCell();
         public ISceneDataContext SceneDataSet => _globalDataContext.OpenedSaveCellContext?.OpenedSceneContext;
 
         public DataExplorer(IGlobalDataContext globalDataContext)
