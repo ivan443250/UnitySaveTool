@@ -227,15 +227,45 @@ public void Construct(IDataExplorer dataExplorer)
 IGlobalDataContext globalContext = _dataExplorer.GlobalDataSet; // Глобальный контекст (1)
 ISaveCellContext saveCellContext = _dataExplorer.SaveCellDataSet; // Контекст ячейки сохранения (2)
 ISceneDataContext sceneDataContext = _dataExplorer.SceneDataSet; // Контекст сцены (3)
+
+// Метод GetData для всех контекстов:
+G globalData = globalContext.GetData<G>();
+T saveCellData = saveCellContext.GetData<T>();
+S sceneData = sceneDataContext.GetData<S>();
+
+// Метод Save для всех контекстов:
+globalContext.Save<G>(globalData);
+saveCellContext.Save<T>(saveCellData);
+sceneDataContext.Save<S>(sceneData);
+```
+## (1) Глобальный контекст
+У приложения этот контекст всегда неизменен. Все данные, сохраненные в этом контексте будут доступны для использования, в любой ячейке cохранения и в любой сцене.
+Также с помощью глобального контекста вы можете открыть ячейку сохранения:
+```C#
+globalContext.OpenSaveCell();
+// Или
+globalContext.OpenSaveCell(0);
+```
+Вызов метода OpenSaveCell без параметра откроет последнюю использованную ячейку, либо вы можете явно указать, какую ячейку хотите открыть.
+Если ячейки с индексом, который вы указали, не существует, то папка сохранения с таким индексом будет создана автоматически.
+Метод OpenSaveCell читает всю информацию (кроме папок со сценами) в папке с индексом ячейки, десериализует в объекты и кеширует. Благодаря этому получение данных (GetData<T>()) из ячейки после вызова OpenSaveCell происходит моментально.
+
+## (2) Контекст ячейки сохранения
+Контекст остается неизменным, когда игра переключается между разными сценами, но вы можете изменить контекст вручную, способом, указанным выше.
+
+Для загрузки информации сцены можно использовать метод у ISaveCellContext:
+```C#
+saveCellContext.OpenScene("SampleScene"); // Где "SampleScene" это название сцены 
 ```
 
-
-
-
-
-
-
-
+Либо если ISaveCellContext мог быть еще не открыт, можно использовать метод у IDataExplorer (рекомендуется):
+```C#
+_dataExplorer.OpenSceneDataSet("SampleScene");
+```
+Этот метод сначала проверит открыт ли ISaveCellContext и только потом вызовет у него OpenScene
+## (3) Контекст сцены
+Этот контекст самый низкий по уровню и не может хранить в себе другие контексты. Также он будет заменен на новый созданный ISceneDataContext при переключении сцены (если на новой сцене есть SaveToolSceneInstaller)
+В отличие от свойств GlobalDataSet и SaveCellDataSet у IDataExplorer, свойство SceneDataSet может вернуть null, если в приложении еще не было открыто ни одной сцены с SaveToolSceneInstaller или если еще ни разц не вызывался метод (ISceneDataContext.OpenScene или IDataExplorer.OpenSceneDataSet)
 
 
 
