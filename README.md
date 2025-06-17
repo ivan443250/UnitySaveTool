@@ -271,7 +271,7 @@ _dataExplorer.OpenSceneDataSet("SampleScene");
 ```
 Этот метод сначала проверит открыт ли ISaveCellContext и только потом вызовет у него OpenScene
 
-<a name="saceneContext"></a>
+<a name="sceneContext"></a>
 ## (3) Контекст сцены
 Этот контекст самый низкий по уровню и не может хранить в себе другие контексты. Также он будет заменен на новый созданный ISceneDataContext при переключении сцены (если на новой сцене есть SaveToolSceneInstaller)
 В отличие от свойств GlobalDataSet и SaveCellDataSet у IDataExplorer, свойство SceneDataSet может вернуть null, если в приложении еще не было открыто ни одной сцены с SaveToolSceneInstaller или если еще ни разц не вызывался метод (ISceneDataContext.OpenScene или IDataExplorer.OpenSceneDataSet)
