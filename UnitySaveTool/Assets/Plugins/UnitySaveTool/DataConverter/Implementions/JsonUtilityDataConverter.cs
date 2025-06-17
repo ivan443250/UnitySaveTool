@@ -7,7 +7,7 @@ namespace UnitySaveTool
     {
         public string ConvertFromObject(object obj)
         {
-            if (obj is IBeforeConvertationCallbackReciever reciever)
+            if (obj is IBeforeConvertationCallbackReceiver reciever)
                 reciever.OnBeforeConvertation();
 
             return JsonUtility.ToJson(obj, true);
@@ -17,7 +17,7 @@ namespace UnitySaveTool
         {
             object obj = JsonUtility.FromJson(objectSrting, objectType);
 
-            if (obj is IAfterConvertationCallbackReciever reciever)
+            if (obj is IAfterConvertationCallbackReceiver reciever)
                 reciever.OnAfterConvertation();
 
             return obj;
