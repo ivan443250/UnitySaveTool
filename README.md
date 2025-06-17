@@ -3,7 +3,7 @@
 ## Основные преимущества:
 * **Простота использования**
     - Если в проекте используется DI фреймворк, то сохраняемые типы данных будут зарегистрированы как зависимости и DI контейнер автоматически внедрит их.
-    - Библиотека уже поддерживает такую работу с Zenject, для работы с другими DI фреймворками смотри здесь.
+    - Библиотека уже поддерживает такую работу с Zenject, для работы с другими DI фреймворками [смотри здесь](### Подключение кастомного DI контейнера).
 * **Возможность выбирать контекст сохранения**
     - **[Глобальный контекст]** Для сохранения данных в области видимости всего проекта (Настройки, кеш и т.д.)
     - **[Контекст игрового прогресса]** Для данных игрового прогресса которые не привязаны к конкретной сцене (Инвентарь игрока, количество смертей и т.д.)
@@ -273,6 +273,89 @@ _dataExplorer.OpenSceneDataSet("SampleScene");
 
 ## Итог
 Такое разделение на контексты позволит избежать неприятной работы со строками (путями файлов, названиями файлов), вместо этого есть просто методы для открытия и работы с нужным контекстом
- 
+
+## Дополнительно
+
+### IDataConverter
+Вы моежте настроить механизм конвертирования данных реализовав IDataConverter:
+```C#
+public interface IDataConverter
+{
+    string ConvertFromObject(object obj);
+
+    object ConvertToObject(string objectSrting, Type objectType);
+}
+```    
+Его дефолтная реализация использует JsonUtility для конвертации, но вы можете заменить дефолтную реализацию на свою в SaveToolProjectInstaller:
+```C#
+//Container
+//    .Bind<IDataConverter>()
+//    .To<JsonUtilityDataConverter>()
+//    .AsSingle();
+// Заменить на 
+
+Container
+    .Bind<IDataConverter>()
+    .To</*Своя реализация*/>()
+    .AsSingle();
+```
+
+### Замена ISerializationCallbackReceiver
+В Unity есть интерфейс для [Serializable] типов:
+```C#
+[Serializable]
+[SaveToolData(SaveContext.SaveCell)]
+public class TestSaveData : ISerializationCallbackReceiver
+{
+    ...
+
+    public void OnAfterDeserialize()
+    {
+        ...
+    }
+
+    public void OnBeforeSerialize()
+    {
+        ...
+    }
+}
+```
+Есть небольшое неудобство, так как если типу нужен только 1 из этих методов другой просто прийдется добавить и оставить пустым. Кроме того, эти методы будут вызываться не только при записи данных в память, но также при обновлении в отрисовке инспектора. 
+
+Чтобы убрать эти неудобства были добавлены два интерфейса IAfterConvertationCallbackReceiver и IBeforeConvertationCallbackReceiver:
+```C#
+[Serializable]
+[SaveToolData(SaveContext.SaveCell)]
+public class TestSaveData : IAfterConvertationCallbackReceiver, IBeforeConvertationCallbackReceiver
+{
+    ...
+
+    public void OnAfterConvertation()
+    {
+        ...
+    }
+
+    public void OnBeforeConvertation()
+    {
+        ...
+    }
+}
+```
+Метод OnAfterConvertation вызывается после десериализации объекта, метод OnBeforeConvertation вызывается перед его сериализацией (аналог OnAfterDeserialize и OnBeforeSerialize)
+В отличие от ISerializationCallbackReceiver эти методы не будут вызываться при отрисовке в конструкторе, а также теперь вы можете использовать их по отдельности. Добавить только один из методов IAfterConvertationCallbackReceiver.OnAfterConvertation или IBeforeConvertationCallbackReceiver.OnBeforeConvertation
+
+### Подключение кастомного DI контейнера
+
+
+
+
+
+
+
+
+
+
+
+
 
 
