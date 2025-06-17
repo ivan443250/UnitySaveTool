@@ -267,7 +267,8 @@ _dataExplorer.OpenSceneDataSet("SampleScene");
 Этот контекст самый низкий по уровню и не может хранить в себе другие контексты. Также он будет заменен на новый созданный ISceneDataContext при переключении сцены (если на новой сцене есть SaveToolSceneInstaller)
 В отличие от свойств GlobalDataSet и SaveCellDataSet у IDataExplorer, свойство SceneDataSet может вернуть null, если в приложении еще не было открыто ни одной сцены с SaveToolSceneInstaller или если еще ни разц не вызывался метод (ISceneDataContext.OpenScene или IDataExplorer.OpenSceneDataSet)
 
-
-
+## Итог
+Такое разделение на контексты позволит избежать неприятной работы со строками (путями файлов, названиями файлов), вместо этого есть протсо методы для открытия и работы с нужным контекстом
+ 
 
 
