@@ -352,6 +352,50 @@ public class TestSaveData : IAfterConvertationCallbackReceiver, IBeforeConvertat
 <a name="customDI-anchor"></a>
 ### Подключение кастомного DI контейнера
 
+Нужно добавить класс, связывающий библиотеку и ваш DI контейнер. Для этого нужно создать вспомогательный класс, представляющий интерфейс взаимодействия библиотеки с вашим классом:
+```C#
+public interface IDIContainer
+{
+    void RegisterProvdier(IProvider provider);
+    void RegisterInstance<TInterface>(TInterface instance);
+    bool HasBinding(Type type);
+}
+```
+Затем зарегистрируйте зависимости в контексте проекта. Зависимости такие-же, как на примере с Zenject:
+```C#
+ Container
+     .Bind<IDataConverter>()
+     .To<JsonUtilityDataConverter>()
+     .AsSingle();
+
+ Container
+     .Bind(typeof(IFileSystem), typeof(IAsyncFileSystem))
+     .To<FileSystem>()
+     .AsSingle();
+
+ Container
+     .Bind<IGlobalDataContext>()
+     .To<GlobalDataContext>()
+     .AsSingle();
+
+ Container
+     .Bind<IDataExplorer>()
+     .To<DataExplorer>()
+     .AsSingle();
+
+ Container
+     .Bind<IDIContainer>()
+     .FromInstance(new ZenjectDIContainer(Container))
+     .WhenInjectedInto<SaveToolBindInstaller>();
+
+ Container
+     .Bind<ISaveToolBindInstaller>()
+     .To<SaveToolBindInstaller>()
+     .AsSingle();
+```
+Это минимальный список зависимостей, которые должны быть зарегистрированы в контексте проекта, без них библиотека не будет работать.
+Вы также можете заменить каждый из этих интерфейсов своей реализацией
+
 
 
 
